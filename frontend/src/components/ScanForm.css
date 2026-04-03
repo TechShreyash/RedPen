@@ -1,0 +1,86 @@
+.scan-form {
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-form-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.scan-form-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.scan-form-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  padding: 8px 0 !important;
+  font-size: 0.9rem !important;
+}
+
+.scan-form-input:focus {
+  box-shadow: none !important;
+}
+
+.scan-form-btn {
+  padding: 10px 24px !important;
+  font-size: 0.9rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Progress bar */
+.scan-progress {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.scan-progress-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 100px;
+  background: var(--bg-elevated);
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: var(--accent-gradient);
+  border-radius: 100px;
+  animation: shimmer 1.5s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.scan-progress-bar::after {
+  animation: progress-slide 1.5s ease-in-out infinite;
+}
+
+.scan-progress-text {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

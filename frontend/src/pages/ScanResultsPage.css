@@ -1,0 +1,110 @@
+/* ============================================
+   ScanResultsPage Styles
+   ============================================ */
+
+.results-page {
+  min-height: 60vh;
+}
+
+/* Loading */
+.results-loading {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-xl);
+}
+
+.results-loading-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-lg);
+}
+
+.results-loading h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+}
+
+.results-loading-id {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.results-loading-id code {
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+/* Error */
+.results-error {
+  text-align: center;
+  padding: var(--space-2xl);
+  max-width: 500px;
+  margin: var(--space-3xl) auto;
+}
+
+.results-error-icon {
+  margin-bottom: var(--space-lg);
+}
+
+.results-error h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+  color: var(--severity-error);
+}
+
+.results-error p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: var(--space-sm);
+}
+
+.results-error-id code {
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+/* Page Header */
+.results-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.results-page-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.results-page-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.results-page-id {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.results-page-id code {
+  background: var(--bg-elevated);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+.results-page-time {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}

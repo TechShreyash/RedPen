@@ -1,0 +1,28 @@
+.severity-badge {
+  position: relative;
+  overflow: hidden;
+}
+
+.severity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.badge-error .severity-dot {
+  background: var(--severity-error);
+  box-shadow: 0 0 6px var(--severity-error);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.badge-warning .severity-dot {
+  background: var(--severity-warning);
+  box-shadow: 0 0 6px var(--severity-warning);
+}
+
+.badge-info .severity-dot {
+  background: var(--severity-info);
+  box-shadow: 0 0 6px var(--severity-info);
+}
