@@ -1,64 +1,82 @@
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "semgrep",
+#     "requests",
+# ]
+# ///
+
 import json
 import sys
 import os
 import subprocess
+import requests
 
-def scan_folder_with_semgrep(target_directory):
-    """
-    Runs Semgrep on a target directory and returns the parsed JSON results.
-    """
-    print(f"Starting Semgrep scan on: {target_directory}...")
-    
-    # Exclude this script itself from being scanned
+# ── Configuration ───────────────────────────────────────────────────────────
+API_BASE = "http://127.0.0.1:8000"
+API_INIT = f"{API_BASE}/api/scans/files"
+API_RESULTS = f"{API_BASE}/api/scans/results"
+WEB_BASE = "https://redpen.com"
+
+
+# ── Directory structure ─────────────────────────────────────────────────────
+
+def get_directory_structure(path="."):
+    """Walk the directory and return a list of relative file paths."""
+    file_list = []
+    for root, dirs, files in os.walk(path):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ("node_modules", "__pycache__", ".git", "venv", ".venv")]
+        for f in files:
+            if not f.startswith("."):
+                rel = os.path.relpath(os.path.join(root, f), path)
+                file_list.append(rel)
+    return file_list
+
+
+def send_directory_structure(file_list):
+    """POST directory structure to API 1, returns scan ID."""
+    try:
+        response = requests.post(API_INIT, json={"files": file_list}, timeout=30)
+        response.raise_for_status()
+        return response.json().get("scan_id")
+    except Exception:
+        return None
+
+
+# ── Scanning ────────────────────────────────────────────────────────────────
+
+def scan_folder(target_directory):
+    """Runs the scanner on a target directory and returns parsed JSON results."""
     this_file = os.path.basename(__file__)
-
-    # We use --json to get structured output and --quiet to suppress standard logs
     command = [
-        "semgrep", "scan", 
-        "--config", "auto", 
-        "--json", 
+        "semgrep", "scan",
+        "--config", "auto",
+        "--json",
         "--quiet",
         "--exclude", this_file,
         target_directory
     ]
-    
+
     try:
-        # Run the command and capture the output
         result = subprocess.run(command, capture_output=True, text=True, check=False)
-        
-        # Semgrep returns exit code 1 if it finds issues, and 0 if it finds none.
-        # Exit code 2+ usually means a crash or configuration error.
         if result.returncode >= 2:
-            print(f"Semgrep failed to run. Error: {result.stderr}")
             sys.exit(1)
-            
-        # Parse the JSON output
-        scan_data = json.loads(result.stdout)
-        return scan_data
-
-    except FileNotFoundError:
-        print("Semgrep is not installed or not in your system PATH.")
-        sys.exit(1)
-    except json.JSONDecodeError:
-        print("Failed to parse Semgrep JSON output.")
+        return json.loads(result.stdout)
+    except (FileNotFoundError, json.JSONDecodeError):
         sys.exit(1)
 
-def read_source_lines(path: str) -> list[str]:
-    """Read all lines from a source file. Returns list of lines WITH newlines."""
+
+def read_source_lines(path: str) -> list:
+    """Read all lines from a source file."""
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         return f.readlines()
 
 
-def determine_snippet_range(result: dict) -> tuple[int, int]:
-    """
-    Determine the full line range of the code construct that triggered
-    the finding. This inspects metavar positions + start/end of the
-    result itself and returns the widest (min_line, max_line).
-    """
+def determine_snippet_range(result: dict) -> tuple:
+    """Determine the widest line range of the finding (including metavars)."""
     start_line = result["start"]["line"]
     end_line = result["end"]["line"]
 
-    # Also look at metavar positions — they often span a broader construct
     metavars = result.get("extra", {}).get("metavars", {})
     for _name, mv in metavars.items():
         mv_start = mv.get("start", {}).get("line", start_line)
@@ -66,7 +84,6 @@ def determine_snippet_range(result: dict) -> tuple[int, int]:
         start_line = min(start_line, mv_start)
         end_line = max(end_line, mv_end)
 
-        # propagated_value can point even further
         pv = mv.get("propagated_value", {})
         if pv:
             pv_start = pv.get("svalue_start", {}).get("line", start_line)
@@ -74,7 +91,6 @@ def determine_snippet_range(result: dict) -> tuple[int, int]:
             start_line = min(start_line, pv_start)
             end_line = max(end_line, pv_end)
 
-    # Also check dataflow_trace for taint_source / taint_sink ranges
     dt = result.get("extra", {}).get("dataflow_trace", {})
     for key in ("taint_source", "taint_sink"):
         trace = dt.get(key, [])
@@ -89,22 +105,15 @@ def determine_snippet_range(result: dict) -> tuple[int, int]:
     return start_line, end_line
 
 
-def expand_to_block(lines: list[str], start: int, end: int) -> tuple[int, int]:
-    """
-    Try to expand the range to cover a full syntactic block.
-    Walks outward from start/end while the indentation suggests we're
-    inside a multi-line call or block (simple heuristic: look for
-    matching parens / lower indentation).
-    """
+def expand_to_block(lines: list, start: int, end: int) -> tuple:
+    """Expand the range to cover a full syntactic block."""
     total = len(lines)
 
-    # Walk upward while line is continuation (higher indent or opens a block)
     while start > 1:
-        prev = lines[start - 2]  # 0-indexed
+        prev = lines[start - 2]
         stripped = prev.rstrip()
         if not stripped:
             break
-        # If previous line ends with '(' or ',' or has deeper/equal indent
         curr_indent = len(lines[start - 1]) - len(lines[start - 1].lstrip())
         prev_indent = len(prev) - len(prev.lstrip())
         if prev_indent < curr_indent or stripped.endswith(("(", ",")):
@@ -112,9 +121,8 @@ def expand_to_block(lines: list[str], start: int, end: int) -> tuple[int, int]:
         else:
             break
 
-    # Walk downward to close the block (look for closing paren at lower indent)
     while end < total:
-        nxt = lines[end]  # 0-indexed (end is 1-indexed, so lines[end] is end+1)
+        nxt = lines[end]
         stripped = nxt.rstrip()
         if not stripped:
             break
@@ -123,7 +131,6 @@ def expand_to_block(lines: list[str], start: int, end: int) -> tuple[int, int]:
         if nxt_indent >= curr_indent or stripped.endswith((",", ")")):
             end += 1
         else:
-            # Include closing paren line
             if ")" in stripped:
                 end += 1
             break
@@ -131,16 +138,9 @@ def expand_to_block(lines: list[str], start: int, end: int) -> tuple[int, int]:
     return start, end
 
 
-def extract_snippets(source_lines: list[str], start: int, end: int, context: int = 10):
-    """
-    Given 1-indexed start/end line numbers:
-      - snippet:          lines[start-1 .. end-1]
-      - snippet_extended: lines[start-1-context .. end-1+context] (clamped)
-    Returns (snippet, snippet_extended, ext_start, ext_end)
-    """
+def extract_snippets(source_lines: list, start: int, end: int, context: int = 10):
+    """Extract code snippet and extended context around it."""
     total = len(source_lines)
-
-    # Clamp
     s = max(1, start)
     e = min(total, end)
 
@@ -154,19 +154,16 @@ def extract_snippets(source_lines: list[str], start: int, end: int, context: int
 
 
 def process_result(result: dict, base_dir: str) -> dict:
-    """Transform one raw semgrep result into the UI-friendly format."""
+    """Transform one raw result into the UI-friendly format."""
     path = result["path"]
     abs_path = os.path.join(base_dir, path)
 
-    # Read source file
     source_lines = []
     if os.path.isfile(abs_path):
         source_lines = read_source_lines(abs_path)
 
-    # Determine the range of the vulnerable code construct
     raw_start, raw_end = determine_snippet_range(result)
 
-    # Try to expand to a full block (e.g. the whole add_middleware call)
     if source_lines:
         block_start, block_end = expand_to_block(source_lines, raw_start, raw_end)
     else:
@@ -176,7 +173,6 @@ def process_result(result: dict, base_dir: str) -> dict:
         source_lines, block_start, block_end, context=10
     )
 
-    # Extract metadata subset
     meta = result.get("extra", {}).get("metadata", {})
     metadata_clean = {
         "cwe": meta.get("cwe", []),
@@ -202,26 +198,63 @@ def process_result(result: dict, base_dir: str) -> dict:
     }
 
 
-def process_semgrep_json():
-    """Main entry: scan current directory with semgrep, produce cleaned JSON."""
-    raw = scan_folder_with_semgrep(".")
+def process_scan():
+    """Scan current directory and produce cleaned JSON."""
+    raw = scan_folder(".")
 
     findings = raw.get("results", [])
-    base_dir = "."
-    processed = [process_result(r, base_dir) for r in findings]
+    processed = [process_result(r, ".") for r in findings]
 
-    # Top-level fields
     paths_scanned = raw.get("paths", {}).get("scanned", [])
     total_time = raw.get("time", {}).get("profiling_times", {}).get("total_time", 0)
 
-    output = {
+    return {
         "results": processed,
         "paths_scanned": paths_scanned,
         "total_time": total_time,
     }
 
-    return output
+
+# ── Upload results ──────────────────────────────────────────────────────────
+
+def upload_scan_results(scan_id, results):
+    """POST processed scan results to API 2."""
+    try:
+        payload={"scan_id": scan_id,"results":results}
+        response = requests.post(API_RESULTS, json=payload, timeout=30)
+        response.raise_for_status()
+        return True
+    except Exception:
+        return False
+
+
+# ── Main ────────────────────────────────────────────────────────────────────
+
+def main():
+    print("⚡ Initializing...")
+
+    # Step 1: Collect directory structure → send to API 1 → get scan ID
+    print("📂 Checking file directory structure...")
+    file_list = get_directory_structure(".")
+    scan_id = send_directory_structure(file_list)
+
+    # Step 2: Print results URL
+    if scan_id:
+        print(f"🔗 Open webpage to check results: {WEB_BASE}/{scan_id}")
+    else:
+        print("🔗 Open webpage to check results: (offline mode — API unavailable)")
+
+    # Step 3: Scan for vulnerabilities → upload to API 2
+    print("🔍 Scanning for vulnerabilities...")
+    results = process_scan()
+
+    print (results)
+
+    if scan_id:
+        upload_scan_results(scan_id, results)
+
+    print("✅ Done")
 
 
 if __name__ == "__main__":
-    print(json.dumps(process_semgrep_json(), indent=2))
+    main()

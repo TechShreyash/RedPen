@@ -1,0 +1,12 @@
+# ── RedPen Scanner — One-line install & run ──
+
+# The curl one-liner (what users run):
+curl -sSL https://raw.githubusercontent.com/TechShreyash/RedPen/main/Scanner/scan.sh | bash
+
+# With custom API URL and key:
+REDPEN_API_URL="https://your-api.com/scan" REDPEN_API_KEY="sk-xxx" curl -sSL https://raw.githubusercontent.com/TechShreyash/RedPen/main/Scanner/scan.sh | bash
+
+# ── For local dev/testing ──
+
+# Run directly with uv (if uv is already installed):
+uv run process_results.py
