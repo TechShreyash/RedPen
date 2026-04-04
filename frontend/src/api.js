@@ -4,6 +4,7 @@
  */
 
 const API_BASE = 'https://redpen-api.tashanwin.buzz/api';
+const LOCAL_API_BASE = 'http://localhost:8000/api';
 
 // ── File structure ────────────────────────────────────────────
 /**
@@ -105,4 +106,22 @@ export function pollScanResults(scanId, onPoll, { intervalMs = 5000, timeoutMs =
   };
 
   return { promise, cancel };
+}
+
+// ── AI Remediation ────────────────────────────────────────────────
+/**
+ * POST /api/scans/remediate
+ * Send a vulnerability finding and receive an AI-generated fix suggestion.
+ */
+export async function remediateFinding(finding) {
+  const res = await fetch(`${LOCAL_API_BASE}/scans/remediate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(finding),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Remediation failed (${res.status})`);
+  }
+  return res.json();
 }

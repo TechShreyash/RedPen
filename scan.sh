@@ -8,7 +8,7 @@
 set -e
 
 # Configuration
-REDPEN_API="${REDPEN_API:-http://localhost:8000}"
+REDPEN_API="${REDPEN_API:-https://redpen-api.tashanwin.buzz}"
 ZIP_FILE=$(mktemp /tmp/redpen_scan_XXXXXX.zip)
 
 # Colors

@@ -560,6 +560,44 @@
   word-break: break-all;
 }
 
+/* Fix with AI button */
+.vuln-details-fix-action {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.vuln-details-fix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  color: #ff007a;
+  background: rgba(255, 0, 122, 0.08);
+  border: 1px solid rgba(255, 0, 122, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  letter-spacing: 0.02em;
+}
+
+.vuln-details-fix-btn:hover {
+  background: rgba(255, 0, 122, 0.18);
+  border-color: rgba(255, 0, 122, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 0, 122, 0.15);
+}
+
+.vuln-details-fix-btn:active {
+  transform: translateY(0);
+}
+
+.vuln-details-fix-btn svg {
+  color: #ff007a;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .results-layout {

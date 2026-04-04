@@ -4,6 +4,7 @@ import ShapeGrid from '../components/ShapeGrid/ShapeGrid';
 import FileTree from '../components/FileTree/FileTree';
 import CodeViewer from '../components/CodeViewer/CodeViewer';
 import ScanProgress from '../components/ScanProgress/ScanProgress';
+import RemediationModal from '../components/RemediationModal/RemediationModal';
 import { getFileStructure, pollScanResults } from '../api';
 import './ResultsPage.css';
 
@@ -78,6 +79,8 @@ const ResultsPage = () => {
   const [showResults, setShowResults] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const cancelPollRef = useRef(null);
+  const [showRemediation, setShowRemediation] = useState(false);
+  const [selectedRemediationVuln, setSelectedRemediationVuln] = useState(null);
 
   // Step 1: Load file structure (this always exists as soon as scan_id is created)
   useEffect(() => {
@@ -499,6 +502,20 @@ const ResultsPage = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* Fix with AI Button */}
+                      <div className="vuln-details-fix-action">
+                        <button
+                          className="vuln-details-fix-btn"
+                          onClick={() => { setSelectedRemediationVuln(vuln); setShowRemediation(true); }}
+                          id={`results-fix-btn-${vIdx}`}
+                        >
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                          </svg>
+                          Fix with AI
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </>
@@ -511,6 +528,14 @@ const ResultsPage = () => {
               ) : null}
             </main>
           </div>
+
+          {/* Remediation Modal */}
+          {showRemediation && selectedRemediationVuln && (
+            <RemediationModal
+              finding={selectedRemediationVuln}
+              onClose={() => { setShowRemediation(false); setSelectedRemediationVuln(null); }}
+            />
+          )}
         </div>
       )}
     </div>

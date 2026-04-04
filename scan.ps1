@@ -7,7 +7,7 @@
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$REDPEN_API = if ($env:REDPEN_API) { $env:REDPEN_API } else { "http://localhost:8000" }
+$REDPEN_API = if ($env:REDPEN_API) { $env:REDPEN_API } else { "https://redpen-api.tashanwin.buzz" }
 $ZIP_FILE = Join-Path $env:TEMP "redpen_scan_$(Get-Random).zip"
 
 # ─── Banner ────────────────────────────────
