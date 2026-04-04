@@ -2,9 +2,8 @@ import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import StatsPanel from '../components/StatsPanel';
 import VulnerabilityCard from '../components/VulnerabilityCard';
+import { getScanResults } from '../api';
 import './ScanResultsPage.css';
-
-const API_BASE = 'http://localhost:8000';
 
 export default function ScanResultsPage() {
   const { id } = useParams();
@@ -18,13 +17,10 @@ export default function ScanResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/results/${id}`);
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.detail || `Failed to load scan results (${response.status})`);
-        }
-        const data = await response.json();
-        setScanData(data);
+        const data = await getScanResults(id);
+        // Backend stores results under data.results (the full scan payload)
+        const payload = data.results || data;
+        setScanData(payload);
       } catch (err) {
         setError(err.message);
       } finally {

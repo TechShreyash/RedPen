@@ -1,188 +1,261 @@
+import { useNavigate } from 'react-router-dom';
+import PrismaticBurst from '../components/PrismaticBurst/PrismaticBurst';
+import TextType from '../components/TextType/TextType';
+import CardSwap, { Card } from '../components/CardSwap/CardSwap';
+import BorderGlow from '../components/BorderGlow/BorderGlow';
 import './HomePage.css';
-import { useState } from 'react';
 
-const BACKEND_URL = 'http://localhost:8000';
-
-const BASH_COMMAND = `curl -sL https://raw.githubusercontent.com/TechShreyash/RedPen/main/scan.sh | bash`;
-
-const POWERSHELL_COMMAND = `irm https://raw.githubusercontent.com/TechShreyash/RedPen/main/scan.ps1 | iex`;
-
-const MANUAL_BASH = `# Or run manually:
-zip -r /tmp/redpen_scan.zip . -x "node_modules/*" ".git/*" "__pycache__/*" "*.pyc" ".env" \\
-  && curl -X POST ${BACKEND_URL}/api/scan -F "file=@/tmp/redpen_scan.zip" \\
-  && rm /tmp/redpen_scan.zip`;
-
-const MANUAL_PS = `# Or run manually (PowerShell):
-Compress-Archive -Path . -DestinationPath $env:TEMP\\redpen_scan.zip -Force
-curl.exe -X POST ${BACKEND_URL}/api/scan -F "file=@$env:TEMP\\redpen_scan.zip"
-Remove-Item $env:TEMP\\redpen_scan.zip`;
-
-export default function HomePage() {
-  const [activeTab, setActiveTab] = useState('bash');
-  const [copied, setCopied] = useState(false);
-
-  const command = activeTab === 'bash' ? BASH_COMMAND : POWERSHELL_COMMAND;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+const HomePage = () => {
+  const navigate = useNavigate();
 
   return (
-    <div className="home-page" id="home-page">
-      {/* Hero Section */}
-      <section className="hero" id="hero-section">
-        <div className="hero-glow" />
-        <div className="hero-content">
+    <div className="home-page">
+      {/* Full-screen WebGL background */}
+      <div className="background-layer">
+        <PrismaticBurst
+          animationType="rotate3d"
+          intensity={2}
+          speed={0.5}
+          distort={0}
+          paused={false}
+          offset={{ x: 0, y: 0 }}
+          hoverDampness={0.25}
+          rayCount={0}
+          mixBlendMode="lighten"
+          colors={['#ff007a', '#4d3dff', '#ffffff']}
+        />
+      </div>
+
+      {/* Content overlay */}
+      <div className="content-overlay">
+
+        {/* Navigation */}
+        <nav className="navbar" id="main-nav">
+          <div className="nav-brand">
+            <img src="/logo.png" alt="RedPen" className="nav-logo" />
+            <span className="nav-title">RedPen</span>
+          </div>
+          <div className="nav-links">
+            <a href="#features" className="nav-link">Features</a>
+            <a href="#detect" className="nav-link">Detect</a>
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link nav-link--github"
+            >
+              GitHub
+            </a>
+          </div>
+        </nav>
+
+        {/* Hero Section */}
+        <section className="hero-section" id="hero">
           <div className="hero-badge">
-            <span className="hero-badge-dot" />
-            Open Source Security Scanner
+            <span className="badge-dot"></span>
+            AI Security Scanner
           </div>
           <h1 className="hero-title">
-            Find vulnerabilities in your<br />
-            <span className="hero-title-accent">vibe-coded</span> apps
+            <span className="hero-title-static">Red</span>
+            <span className="hero-title-accent">Pen</span>
           </h1>
+          <div className="hero-typing">
+            <TextType
+              text={[
+                "Crossing out vulnerabilities AI left behind.",
+                "Strict, automated code-grading for the AI era.",
+                "Block vulnerable code before it reaches production.",
+                "Parse your syntax tree in milliseconds."
+              ]}
+              typingSpeed={60}
+              pauseDuration={2000}
+              showCursor
+              cursorCharacter="_"
+              deletingSpeed={35}
+              className="hero-text-type"
+            />
+          </div>
           <p className="hero-subtitle">
-            RedPen scans your codebase for SQL injection, XSS, hardcoded secrets, insecure CORS, 
-            and 1000+ security rules — powered by Semgrep.
+            A local gatekeeper that parses your AST in milliseconds to catch the invisible
+            security debt that AI models ignore — blocking vulnerable code before it ships.
           </p>
-        </div>
-      </section>
+        </section>
 
-      {/* Command Section */}
-      <section className="command-section" id="command-section">
-        <h2 className="section-title">
-          <span className="section-title-number">01</span>
-          Run in your project directory
-        </h2>
-
-        <div className="command-card glass-card">
-          {/* Tab Switcher */}
-          <div className="command-tabs">
-            <button
-              className={`command-tab ${activeTab === 'bash' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bash')}
-              id="tab-bash"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="4 17 10 11 4 5"/>
-                <line x1="12" y1="19" x2="20" y2="19"/>
-              </svg>
-              Bash / macOS / Linux
-            </button>
-            <button
-              className={`command-tab ${activeTab === 'powershell' ? 'active' : ''}`}
-              onClick={() => setActiveTab('powershell')}
-              id="tab-powershell"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="4 17 10 11 4 5"/>
-                <line x1="12" y1="19" x2="20" y2="19"/>
-              </svg>
-              PowerShell / Windows
-            </button>
+        {/* Features Section */}
+        <section className="features-section" id="features">
+          <div className="features-header">
+            <h2 className="section-title">Why RedPen?</h2>
+            <p className="section-subtitle">
+              Every feature is built to catch what AI assistants miss.
+            </p>
           </div>
 
-          {/* Command Display */}
-          <div className="command-display">
-            <div className="command-prefix">$</div>
-            <code className="command-text">{command}</code>
-            <button
-              className="command-copy-btn"
-              onClick={handleCopy}
-              title="Copy command"
-              id="copy-command-btn"
-            >
-              {copied ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                </svg>
-              )}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="how-section" id="how-it-works">
-        <h2 className="section-title">
-          <span className="section-title-number">02</span>
-          How it works
-        </h2>
-
-        <div className="steps-grid">
-          <div className="step-card glass-card animate-fade-in-up stagger-1">
-            <div className="step-number">1</div>
-            <div className="step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="4 17 10 11 4 5"/>
-                <line x1="12" y1="19" x2="20" y2="19"/>
-              </svg>
-            </div>
-            <h3>Run the command</h3>
-            <p>Execute the curl script in your project directory. It zips your code and uploads it securely.</p>
-          </div>
-
-          <div className="step-card glass-card animate-fade-in-up stagger-2">
-            <div className="step-number">2</div>
-            <div className="step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="M9 12l2 2 4-4"/>
-              </svg>
-            </div>
-            <h3>Semgrep analyzes</h3>
-            <p>The backend runs 1000+ security rules covering OWASP Top 10, CWE, and framework-specific checks.</p>
-          </div>
-
-          <div className="step-card glass-card animate-fade-in-up stagger-3">
-            <div className="step-number">3</div>
-            <div className="step-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
-              </svg>
-            </div>
-            <h3>View your results</h3>
-            <p>Get a unique URL printed in your CLI. Open it to see each vulnerability with highlighted code snippets.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="features-section" id="features-section">
-        <h2 className="section-title">
-          <span className="section-title-number">03</span>
-          What RedPen detects
-        </h2>
-
-        <div className="features-grid">
-          {[
-            { icon: '💉', title: 'SQL Injection', desc: 'Detects unsanitized database queries' },
-            { icon: '🔓', title: 'Hardcoded Secrets', desc: 'API keys, passwords, JWT secrets in code' },
-            { icon: '🌐', title: 'Insecure CORS', desc: 'Overly permissive cross-origin policies' },
-            { icon: '⚡', title: 'XSS Vulnerabilities', desc: 'Cross-site scripting attack vectors' },
-            { icon: '🔑', title: 'Auth Bypass', desc: 'Missing or broken authentication checks' },
-            { icon: '📦', title: 'Dependency Issues', desc: 'Known CVEs in your dependencies' },
-          ].map((feature, i) => (
-            <div key={feature.title} className={`feature-tag glass-card animate-fade-in-up stagger-${i % 6 + 1}`}>
-              <span className="feature-icon">{feature.icon}</span>
-              <div>
-                <strong>{feature.title}</strong>
-                <span className="feature-desc">{feature.desc}</span>
+          <div className="features-layout">
+            <div className="features-text">
+              <div className="feature-item">
+                <div className="feature-icon">⚡</div>
+                <div className="feature-info">
+                  <h3>Millisecond Analysis</h3>
+                  <p>AST-powered scanning completes before your CI pipeline even starts.</p>
+                </div>
+              </div>
+              <div className="feature-item">
+                <div className="feature-icon">🛡️</div>
+                <div className="feature-info">
+                  <h3>OWASP & CWE Mapped</h3>
+                  <p>Every finding maps to industry-standard vulnerability databases.</p>
+                </div>
+              </div>
+              <div className="feature-item">
+                <div className="feature-icon">🔒</div>
+                <div className="feature-info">
+                  <h3>100% Local</h3>
+                  <p>Your code never leaves your machine. Zero cloud dependencies.</p>
+                </div>
+              </div>
+              <div className="feature-item">
+                <div className="feature-icon">🤖</div>
+                <div className="feature-info">
+                  <h3>AI-Aware Rules</h3>
+                  <p>Purpose-built to catch the patterns AI code generators produce.</p>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+
+            <div className="features-cards">
+              <CardSwap
+                cardDistance={60}
+                verticalDistance={70}
+                delay={3000}
+                pauseOnHover={false}
+                width={420}
+                height={280}
+              >
+                <Card>
+                  <div className="swap-card-content">
+                    <div className="swap-card-icon">🔍</div>
+                    <h3 className="swap-card-title">SQL Injection Detection</h3>
+                    <p className="swap-card-desc">
+                      Identifies f-string SQL queries, unsanitized inputs, and raw query execution patterns that AI assistants commonly generate.
+                    </p>
+                    <div className="swap-card-tags">
+                      <span className="swap-tag swap-tag--error">CWE-89</span>
+                      <span className="swap-tag swap-tag--warning">OWASP A03</span>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="swap-card-content">
+                    <div className="swap-card-icon">🔑</div>
+                    <h3 className="swap-card-title">Hardcoded Secrets</h3>
+                    <p className="swap-card-desc">
+                      Catches JWT secrets, API keys, and credentials embedded directly in source code — a pattern AI loves to produce.
+                    </p>
+                    <div className="swap-card-tags">
+                      <span className="swap-tag swap-tag--error">CWE-798</span>
+                      <span className="swap-tag swap-tag--warning">OWASP A07</span>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="swap-card-content">
+                    <div className="swap-card-icon">🌐</div>
+                    <h3 className="swap-card-title">CORS Misconfiguration</h3>
+                    <p className="swap-card-desc">
+                      Detects wildcard origins, overly permissive headers, and insecure cross-domain policies in your API middleware.
+                    </p>
+                    <div className="swap-card-tags">
+                      <span className="swap-tag swap-tag--warning">CWE-942</span>
+                      <span className="swap-tag swap-tag--warning">OWASP A05</span>
+                    </div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="swap-card-content">
+                    <div className="swap-card-icon">🛂</div>
+                    <h3 className="swap-card-title">Auth Bypass Detection</h3>
+                    <p className="swap-card-desc">
+                      Flags unverified JWT decodes, disabled signature checks, and broken authentication flows that compromise security.
+                    </p>
+                    <div className="swap-card-tags">
+                      <span className="swap-tag swap-tag--error">CWE-287</span>
+                      <span className="swap-tag swap-tag--warning">OWASP A02</span>
+                    </div>
+                  </div>
+                </Card>
+              </CardSwap>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Section */}
+        <section className="stats-section">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-number">6</span>
+              <span className="stat-label">Vulnerabilities Found</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-number">&lt;1s</span>
+              <span className="stat-label">Scan Time</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-number">3</span>
+              <span className="stat-label">Critical Errors</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-number">100%</span>
+              <span className="stat-label">Local & Private</span>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="cta-section" id="detect">
+          <h2 className="cta-title">Ready to scan your code?</h2>
+          <p className="cta-subtitle">
+            See exactly what RedPen catches — from SQL injections to hardcoded secrets.
+          </p>
+          <div className="cta-button-wrapper">
+            <BorderGlow
+              edgeSensitivity={30}
+              glowColor="350 80 60"
+              backgroundColor="#0a0215"
+              borderRadius={16}
+              glowRadius={40}
+              glowIntensity={1.2}
+              coneSpread={25}
+              animated={false}
+              colors={['#ff007a', '#4d3dff', '#38bdf8']}
+            >
+              <button
+                className="detect-button"
+                id="detect-button"
+                onClick={() => navigate('/results')}
+              >
+                <img src="/logo.png" alt="" className="detect-button-icon" style={{ height: '20px', width: 'auto' }} />
+                Detect Vulnerabilities
+                <span className="detect-button-arrow">→</span>
+              </button>
+            </BorderGlow>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="site-footer">
+          <div className="footer-content">
+            <div className="footer-brand">
+              <img src="/logo.png" alt="RedPen" className="nav-logo" />
+              <span>RedPen</span>
+            </div>
+            <p className="footer-tagline">Crossing out vulnerabilities AI left behind.</p>
+            <div className="footer-divider"></div>
+            <p className="footer-copy">Built for hackathon 2026 • RedPen Security</p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
-}
+};
+
+export default HomePage;

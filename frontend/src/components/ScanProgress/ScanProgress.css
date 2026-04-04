@@ -1,0 +1,267 @@
+.scan-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 70px);
+  padding: 2rem;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scan-progress-card {
+  background: rgba(10, 5, 25, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 560px;
+}
+
+.scan-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.scan-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.scan-logo-icon {
+  color: #ff007a;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.scan-logo-text {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.scan-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+/* Overall progress */
+.scan-overall {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.scan-overall-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.scan-overall-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #ff007a, #8b5cf6);
+  transition: width 0.2s linear;
+  position: relative;
+}
+
+.scan-overall-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+.scan-overall-fill--done {
+  background: linear-gradient(90deg, #22c55e, #10b981);
+}
+
+.scan-overall-fill--done::after {
+  animation: none;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.scan-overall-pct {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 38px;
+  text-align: right;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Steps */
+.scan-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scan-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.scan-step--done {
+  opacity: 0.5;
+}
+
+.scan-step--active {
+  background: rgba(255, 0, 122, 0.06);
+}
+
+.scan-step--pending {
+  opacity: 0.3;
+}
+
+.scan-step-indicator {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.scan-check {
+  color: #22c55e;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.scan-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 0, 122, 0.2);
+  border-top-color: #ff007a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.scan-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.scan-step-label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.65);
+  flex: 1;
+}
+
+.scan-step--active .scan-step-label {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.scan-step-bar {
+  width: 60px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.scan-step-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #ff007a;
+  transition: width 0.1s linear;
+}
+
+/* Result reveal */
+.scan-result-reveal {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scan-result-count {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.scan-count-number {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff007a, #ff4da6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.03em;
+}
+
+.scan-count-label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.scan-severity-breakdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.scan-sev {
+  padding: 0.25rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.scan-sev--error {
+  background: rgba(255, 0, 80, 0.15);
+  color: #ff4d7a;
+  border: 1px solid rgba(255, 0, 80, 0.3);
+}
+
+.scan-sev--warning {
+  background: rgba(255, 180, 0, 0.12);
+  color: #ffb84d;
+  border: 1px solid rgba(255, 180, 0, 0.25);
+}

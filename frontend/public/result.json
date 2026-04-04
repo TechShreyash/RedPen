@@ -1,0 +1,233 @@
+{
+    "results": [
+        {
+            "check_id": "python.fastapi.security.wildcard-cors.wildcard-cors",
+            "path": "testApi/api.py",
+            "message": "CORS policy allows any origin (using wildcard '*'). This is insecure and should be avoided.",
+            "severity": "WARNING",
+            "snippet": "app = FastAPI(title=\"B2B Dashboard API\")\n\n# Setup CORS to allow our frontend to connect from anywhere easily\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"*\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n",
+            "snippet_lines": {
+                "start": 12,
+                "end": 21
+            },
+            "snippet_extended": "import jwt\nimport traceback\nfrom fastapi import FastAPI, HTTPException, Request, Header\nfrom fastapi.middleware.cors import CORSMiddleware\nfrom pydantic import BaseModel\nfrom typing import Optional\n\n# Setup secret key for tokens\nJWT_SECRET = \"super_secret_jwt_key_12345_do_not_share\"\n\napp = FastAPI(title=\"B2B Dashboard API\")\n\n# Setup CORS to allow our frontend to connect from anywhere easily\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"*\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n\n# Catch-all error handler so the server doesn't crash silently\n@app.exception_handler(Exception)\nasync def global_exception_handler(request: Request, exc: Exception):\n    return {\n        \"message\": \"An internal error occurred\",\n        \"error\": str(exc),\n        \"stacktrace\": traceback.format_exc()\n    }\n\n",
+            "snippet_extended_lines": {
+                "start": 2,
+                "end": 31
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"
+                ],
+                "owasp": [
+                    "A05:2021 - Security Misconfiguration",
+                    "A02:2025 - Security Misconfiguration"
+                ],
+                "category": "security",
+                "technology": [
+                    "python",
+                    "fastapi"
+                ],
+                "references": [
+                    "https://owasp.org/Top10/A05_2021-Security_Misconfiguration",
+                    "https://cwe.mitre.org/data/definitions/942.html"
+                ],
+                "likelihood": "HIGH",
+                "impact": "LOW",
+                "confidence": "MEDIUM"
+            }
+        },
+        {
+            "check_id": "python.jwt.security.jwt-hardcode.jwt-python-hardcoded-secret",
+            "path": "testApi/api.py",
+            "message": "Hardcoded JWT secret or private key is used. This is a Insufficiently Protected Credentials weakness: https://cwe.mitre.org/data/definitions/522.html Consider using an appropriate security mechanism to protect the credentials (e.g. keeping secrets in environment variables)",
+            "severity": "ERROR",
+            "snippet": "        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n",
+            "snippet_lines": {
+                "start": 69,
+                "end": 70
+            },
+            "snippet_extended": "    return {\"message\": \"User registered successfully\"}\n\n@app.post(\"/api/login\")\ndef login(user: UserAuth):\n    db_conn = get_db()\n    cur = db_conn.execute(\"SELECT * FROM users WHERE username = ? AND password = ?\", (user.username, user.password))\n    user_record = cur.fetchone()\n    \n    if user_record:\n        # Generate token for the user\n        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n        \n    raise HTTPException(status_code=401, detail=\"Invalid username or password\")\n\n@app.get(\"/api/users/search\")\ndef search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n",
+            "snippet_extended_lines": {
+                "start": 59,
+                "end": 80
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-522: Insufficiently Protected Credentials"
+                ],
+                "owasp": [
+                    "A02:2017 - Broken Authentication",
+                    "A04:2021 - Insecure Design",
+                    "A06:2025 - Insecure Design"
+                ],
+                "category": "security",
+                "technology": [
+                    "jwt"
+                ],
+                "references": [
+                    "https://semgrep.dev/blog/2020/hardcoded-secrets-unverified-tokens-and-other-common-jwt-mistakes/"
+                ],
+                "likelihood": "HIGH",
+                "impact": "MEDIUM",
+                "confidence": "HIGH"
+            }
+        },
+        {
+            "check_id": "python.pyjwt.python-pyjwt-hardcoded-secret.python-pyjwt-hardcoded-secret",
+            "path": "testApi/api.py",
+            "message": "A secret is hard-coded in the application. Secrets stored in source code, such as credentials, identifiers, and other types of sensitive data, can be leaked and used by internal or external malicious actors. Use environment variables to securely provide credentials and other secrets or retrieve them from a secure vault or Hardware Security Module (HSM).",
+            "severity": "WARNING",
+            "snippet": "        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n",
+            "snippet_lines": {
+                "start": 69,
+                "end": 70
+            },
+            "snippet_extended": "    return {\"message\": \"User registered successfully\"}\n\n@app.post(\"/api/login\")\ndef login(user: UserAuth):\n    db_conn = get_db()\n    cur = db_conn.execute(\"SELECT * FROM users WHERE username = ? AND password = ?\", (user.username, user.password))\n    user_record = cur.fetchone()\n    \n    if user_record:\n        # Generate token for the user\n        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n        \n    raise HTTPException(status_code=401, detail=\"Invalid username or password\")\n\n@app.get(\"/api/users/search\")\ndef search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n",
+            "snippet_extended_lines": {
+                "start": 59,
+                "end": 80
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-798: Use of Hard-coded Credentials"
+                ],
+                "owasp": [
+                    "A07:2021 - Identification and Authentication Failures",
+                    "A07:2025 - Authentication Failures"
+                ],
+                "category": "security",
+                "technology": [
+                    "pyjwt",
+                    "jwt",
+                    "secrets"
+                ],
+                "references": [
+                    "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+                ],
+                "likelihood": "HIGH",
+                "impact": "MEDIUM",
+                "confidence": "HIGH"
+            }
+        },
+        {
+            "check_id": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+            "path": "testApi/api.py",
+            "message": "Detected possible formatted SQL query. Use parameterized queries instead.",
+            "severity": "WARNING",
+            "snippet": "def search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n",
+            "snippet_lines": {
+                "start": 75,
+                "end": 80
+            },
+            "snippet_extended": "    user_record = cur.fetchone()\n    \n    if user_record:\n        # Generate token for the user\n        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n        \n    raise HTTPException(status_code=401, detail=\"Invalid username or password\")\n\n@app.get(\"/api/users/search\")\ndef search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n    \n    return {\"results\": [{\"id\": row[\"id\"], \"username\": row[\"username\"]} for row in results]}\n\n@app.get(\"/api/dashboard/data\")\ndef get_dashboard_data(authorization: Optional[str] = Header(None)):\n    # Make sure they passed an auth token\n    if not authorization:\n        raise HTTPException(status_code=401, detail=\"Missing token\")\n        \n    token = authorization.replace(\"Bearer \", \"\")\n",
+            "snippet_extended_lines": {
+                "start": 65,
+                "end": 90
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+                ],
+                "owasp": [
+                    "A01:2017 - Injection",
+                    "A03:2021 - Injection",
+                    "A05:2025 - Injection"
+                ],
+                "category": "security",
+                "technology": [
+                    "python"
+                ],
+                "references": [
+                    "https://stackoverflow.com/questions/775296/mysql-parameterized-queries"
+                ],
+                "likelihood": "LOW",
+                "impact": "HIGH",
+                "confidence": "LOW"
+            }
+        },
+        {
+            "check_id": "python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query",
+            "path": "testApi/api.py",
+            "message": "Avoiding SQL string concatenation: untrusted input concatenated with raw SQL query can result in SQL Injection. In order to execute raw query safely, prepared statement should be used. SQLAlchemy provides TextualSQL to easily used prepared statement with named parameters. For complex SQL composition, use SQL Expression Language or Schema Definition Language. In most cases, SQLAlchemy ORM will be a better option.",
+            "severity": "ERROR",
+            "snippet": "def search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n",
+            "snippet_lines": {
+                "start": 75,
+                "end": 80
+            },
+            "snippet_extended": "    user_record = cur.fetchone()\n    \n    if user_record:\n        # Generate token for the user\n        token = jwt.encode({\"id\": user_record[\"id\"], \"username\": user_record[\"username\"]}, JWT_SECRET, algorithm=\"HS256\")\n        return {\"access_token\": token}\n        \n    raise HTTPException(status_code=401, detail=\"Invalid username or password\")\n\n@app.get(\"/api/users/search\")\ndef search_users(name: str):\n    db_conn = get_db()\n    # Search query\n    query = f\"SELECT id, username FROM users WHERE username LIKE '%{name}%'\"\n    cur = db_conn.execute(query)\n    results = cur.fetchall()\n    \n    return {\"results\": [{\"id\": row[\"id\"], \"username\": row[\"username\"]} for row in results]}\n\n@app.get(\"/api/dashboard/data\")\ndef get_dashboard_data(authorization: Optional[str] = Header(None)):\n    # Make sure they passed an auth token\n    if not authorization:\n        raise HTTPException(status_code=401, detail=\"Missing token\")\n        \n    token = authorization.replace(\"Bearer \", \"\")\n",
+            "snippet_extended_lines": {
+                "start": 65,
+                "end": 90
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+                ],
+                "owasp": [
+                    "A01:2017 - Injection",
+                    "A03:2021 - Injection",
+                    "A05:2025 - Injection"
+                ],
+                "category": "security",
+                "technology": [
+                    "sqlalchemy"
+                ],
+                "references": [
+                    "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-textual-sql",
+                    "https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_quick_guide.htm",
+                    "https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-more-specific-text-with-table-expression-literal-column-and-expression-column"
+                ],
+                "likelihood": "LOW",
+                "impact": "HIGH",
+                "confidence": "LOW"
+            }
+        },
+        {
+            "check_id": "python.jwt.security.unverified-jwt-decode.unverified-jwt-decode",
+            "path": "testApi/api.py",
+            "message": "Detected JWT token decoded with 'verify=False'. This bypasses any integrity checks for the token which means the token could be tampered with by malicious actors. Ensure that the JWT token is verified.",
+            "severity": "ERROR",
+            "snippet": "        try:\n            payload = jwt.decode(token, options={\"verify_signature\": False})\n            user_data = payload.get(\"username\")\n",
+            "snippet_lines": {
+                "start": 96,
+                "end": 98
+            },
+            "snippet_extended": "    # Make sure they passed an auth token\n    if not authorization:\n        raise HTTPException(status_code=401, detail=\"Missing token\")\n        \n    token = authorization.replace(\"Bearer \", \"\")\n    \n    if token:\n        # We got the token, so authorized! Let's decode to get user info \n        # (skipping signature verify for now since we just want it working fast)\n        user_data = \"Unknown\"\n        try:\n            payload = jwt.decode(token, options={\"verify_signature\": False})\n            user_data = payload.get(\"username\")\n        except Exception:\n            pass\n            \n        return {\n            \"status\": \"active\",\n            \"current_user\": user_data,\n            \"b2b_metrics\": {\n                \"monthly_recurring_revenue\": 145000,\n                \"active_enterprise_clients\": 42,\n                \"system_health\": \"100%\"\n",
+            "snippet_extended_lines": {
+                "start": 86,
+                "end": 108
+            },
+            "metadata": {
+                "cwe": [
+                    "CWE-287: Improper Authentication"
+                ],
+                "owasp": [
+                    "A02:2017 - Broken Authentication",
+                    "A07:2021 - Identification and Authentication Failures",
+                    "A07:2025 - Authentication Failures"
+                ],
+                "category": "security",
+                "technology": [
+                    "jwt"
+                ],
+                "references": [
+                    "https://github.com/we45/Vulnerable-Flask-App/blob/752ee16087c0bfb79073f68802d907569a1f0df7/app/app.py#L96"
+                ],
+                "likelihood": "MEDIUM",
+                "impact": "MEDIUM",
+                "confidence": "MEDIUM"
+            }
+        }
+    ],
+    "paths_scanned": [
+        "README.md",
+        "__pycache__/process_results.cpython-311.pyc",
+        "cmds.txt",
+        "scan.sh",
+        "testApi/api.py",
+        "testApi/main.py"
+    ],
+    "total_time": 31.678019046783447
+}
