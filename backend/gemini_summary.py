@@ -13,13 +13,12 @@ async def process_single_message_async(message, client, semaphore):
         return ""
         
     prompt = (
-        "Rewrite this security finding as a single short title (3-6 words). "
-        "Rules:\n"
-        "- Name the EXACT technical issue (e.g. 'Wildcard CORS Origin', 'Hardcoded JWT Secret', 'SQL Injection via f-string').\n"
-        "- Do NOT use filler words like: Detected, Found, Identified, Insecure, Issue, Vulnerability, Policy, Alert.\n"
-        "- Do NOT start with a verb.\n"
-        "- No trailing punctuation. No quotes.\n"
-        "- Output ONLY the title, nothing else.\n\n"
+        "Convert this security finding into exactly ONE short title (3-6 words). "
+        "Reply with ONLY that single title on one line. "
+        "No alternatives, no 'or', no options, no explanation, no punctuation, no quotes. "
+        "Name the exact technical flaw, e.g. Wildcard CORS Origin, Hardcoded JWT Secret, "
+        "SQL Injection via String Format, Unverified JWT Signature. "
+        "Banned words: Detected, Found, Identified, Insecure, Issue, Vulnerability, Policy, Alert, Allowed.\n\n"
         f"Finding: {message}"
     )
     try:
@@ -27,10 +26,14 @@ async def process_single_message_async(message, client, semaphore):
         async with semaphore:
             # We use the asynchronous client methods via client.aio
             response = await client.aio.models.generate_content(
-                model='gemma-3-27b-it',
+                model='gemma-3-4b-it',
                 contents=prompt,
             )
-            return response.text.strip()
+            # Post-process: take only the first non-empty line to avoid "or" alternatives
+            raw = response.text.strip()
+            first_line = next((l.strip() for l in raw.splitlines() if l.strip()), raw)
+            # Strip any leading/trailing quotes or punctuation the model might add
+            return first_line.strip('"\' .')
     except Exception as e:
         print(f"Error calling Gemini API for message: {e}")
         return "Error generating summary"

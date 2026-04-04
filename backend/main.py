@@ -31,6 +31,11 @@ class ScanResultsRequest(BaseModel):
     results: dict  # the full scanned JSON response
 
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to RedPen Security Scanner API"}
+
+
 # ── Route 1: Save file structure → returns unique scan_id ─────────
 
 @app.post("/api/scans/files")

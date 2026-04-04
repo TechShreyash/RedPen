@@ -13,10 +13,10 @@ import subprocess
 import requests
 
 # ── Configuration ───────────────────────────────────────────────────────────
-API_BASE = "http://127.0.0.1:8000"
+API_BASE = "https://redpen-api.tashanwin.buzz"
 API_INIT = f"{API_BASE}/api/scans/files"
 API_RESULTS = f"{API_BASE}/api/scans/results"
-WEB_BASE = "https://redpen.com"
+WEB_BASE = "https://redpen.tashanwin.buzz"
 
 
 # ── Directory structure ─────────────────────────────────────────────────────
