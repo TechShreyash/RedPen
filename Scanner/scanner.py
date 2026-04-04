@@ -248,7 +248,7 @@ def main():
     print("🔍 Scanning for vulnerabilities...")
     results = process_scan()
 
-    print (results)
+    # print (results)
 
     if scan_id:
         upload_scan_results(scan_id, results)

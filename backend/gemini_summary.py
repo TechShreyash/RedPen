@@ -12,7 +12,16 @@ async def process_single_message_async(message, client, semaphore):
     if not message:
         return ""
         
-    prompt = f"Provide a concise, one-liner summary of the following security issue message:\n\n{message}"
+    prompt = (
+        "Rewrite this security finding as a single short title (3-6 words). "
+        "Rules:\n"
+        "- Name the EXACT technical issue (e.g. 'Wildcard CORS Origin', 'Hardcoded JWT Secret', 'SQL Injection via f-string').\n"
+        "- Do NOT use filler words like: Detected, Found, Identified, Insecure, Issue, Vulnerability, Policy, Alert.\n"
+        "- Do NOT start with a verb.\n"
+        "- No trailing punctuation. No quotes.\n"
+        "- Output ONLY the title, nothing else.\n\n"
+        f"Finding: {message}"
+    )
     try:
         # Use a semaphore to limit the number of concurrent API requests overall
         async with semaphore:
@@ -69,6 +78,24 @@ async def get_gemini_summaries_async(data):
     summaries = await asyncio.gather(*tasks)
     
     return list(summaries)
+
+
+async def enrich_results_with_titles(data: dict) -> dict:
+    """
+    Takes the full scan results dict, summarises every result's 'message' in
+    parallel via Gemini, and adds a 'title' key to each result.
+    Returns the mutated dict.
+    """
+    results_list = data.get("results", [])
+    if not results_list:
+        return data
+
+    summaries = await get_gemini_summaries_async(data)
+
+    for item, title in zip(results_list, summaries):
+        item["title"] = title
+
+    return data
 
 
 def main():

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from database import file_structures_col, scan_results_col
+from gemini_summary import enrich_results_with_titles
 
 app = FastAPI(title="RedPen Security Scanner API")
 
@@ -71,13 +72,16 @@ async def save_scan_results(payload: ScanResultsRequest):
             detail=f"No scan found with id '{payload.scan_id}'. Save file structure first.",
         )
 
+    # ── Enrich each result with a short AI-generated title (parallel) ──
+    enriched_results = await enrich_results_with_titles(payload.results)
+
     # Upsert so re-submitting the same scan_id just overwrites
     await scan_results_col.update_one(
         {"scan_id": payload.scan_id},
         {
             "$set": {
                 "scan_id": payload.scan_id,
-                "results": payload.results,
+                "results": enriched_results,
                 "updated_at": datetime.now(timezone.utc),
             },
             "$setOnInsert": {
