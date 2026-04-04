@@ -34,7 +34,7 @@ const HomePage = () => {
           </div>
           <div className="nav-links">
             <a href="#features" className="nav-link">Features</a>
-            <a href="#detect" className="nav-link">Detect</a>
+            <a href="#detect" className="nav-link">Scan</a>
             <a
               href="https://github.com"
               target="_blank"
@@ -62,7 +62,7 @@ const HomePage = () => {
                 "Crossing out vulnerabilities AI left behind.",
                 "Strict, automated code-grading for the AI era.",
                 "Block vulnerable code before it reaches production.",
-                "Parse your syntax tree in milliseconds."
+                "Parse your syntax tree in seconds."
               ]}
               typingSpeed={60}
               pauseDuration={2000}
@@ -73,7 +73,7 @@ const HomePage = () => {
             />
           </div>
           <p className="hero-subtitle">
-            A local gatekeeper that parses your AST in milliseconds to catch the invisible
+            A local gatekeeper that parses your AST in seconds to catch the invisible
             security debt that AI models ignore — blocking vulnerable code before it ships.
           </p>
         </section>
@@ -185,27 +185,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="stats-section">
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-number">6</span>
-              <span className="stat-label">Vulnerabilities Found</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-number">&lt;1s</span>
-              <span className="stat-label">Scan Time</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-number">3</span>
-              <span className="stat-label">Critical Errors</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-number">100%</span>
-              <span className="stat-label">Local & Private</span>
-            </div>
-          </div>
-        </section>
+
 
         {/* CTA Section */}
         <section className="cta-section" id="detect">

@@ -240,7 +240,7 @@ def main():
 
     # Step 2: Print results URL
     if scan_id:
-        print(f"🔗 Open webpage to check results: {WEB_BASE}/{scan_id}")
+        print(f"🔗 Open webpage to check results: {WEB_BASE}/results/{scan_id}")
     else:
         print("🔗 Open webpage to check results: (offline mode — API unavailable)")
 
