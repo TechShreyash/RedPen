@@ -98,22 +98,61 @@ const CardSwap = ({
       tl.call(() => { order.current = [...rest, front]; });
     };
 
-    swap();
-    intervalRef.current = window.setInterval(swap, delay);
+    const isVisibleRef = { current: false };
 
-    if (pauseOnHover) {
-      const node = container.current;
-      const pause = () => { tlRef.current?.pause(); clearInterval(intervalRef.current); };
-      const resume = () => { tlRef.current?.play(); intervalRef.current = window.setInterval(swap, delay); };
+    const startSwapping = () => {
+      if (!intervalRef.current) {
+        swap();
+        intervalRef.current = window.setInterval(swap, delay);
+      }
+    };
+
+    const stopSwapping = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      tlRef.current?.pause();
+    };
+
+    // Only swap when component is in the middle of the viewport
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          isVisibleRef.current = true;
+          startSwapping();
+        } else {
+          isVisibleRef.current = false;
+          stopSwapping();
+        }
+      },
+      {
+        // Trigger when element is within the middle 60% of the viewport
+        rootMargin: '-20% 0px -20% 0px',
+        threshold: 0.1,
+      }
+    );
+
+    const node = container.current;
+    if (node) observer.observe(node);
+
+    if (pauseOnHover && node) {
+      const pause = () => { tlRef.current?.pause(); clearInterval(intervalRef.current); intervalRef.current = null; };
+      const resume = () => { if (isVisibleRef.current) startSwapping(); };
       node.addEventListener('mouseenter', pause);
       node.addEventListener('mouseleave', resume);
       return () => {
         node.removeEventListener('mouseenter', pause);
         node.removeEventListener('mouseleave', resume);
+        observer.disconnect();
         clearInterval(intervalRef.current);
       };
     }
-    return () => clearInterval(intervalRef.current);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(intervalRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardDistance, verticalDistance, delay, pauseOnHover, skewAmount, easing]);
 
