@@ -15,13 +15,19 @@ load_dotenv()
 
 app = FastAPI(title="RedPen Security Scanner API")
 
-# CORS — permissive for local dev
+# CORS — locked to known origins in production
+_raw_origins = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "https://redpen.tashanwin.buzz,http://localhost:5173,http://localhost:4173"
+)
+allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Accept"],
 )
 
 

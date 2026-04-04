@@ -1,0 +1,16 @@
+# ── Secrets ────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Node dependencies ──────────────────────────
+node_modules/
+package-lock.json
+
+# ── Logs ───────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Misc ───────────────────────────────────────
+.DS_Store
+*.bak

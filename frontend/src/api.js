@@ -3,8 +3,7 @@
  * Centralised API calls to the deployed FastAPI backend.
  */
 
-const API_BASE = 'https://redpen-api.tashanwin.buzz/api';
-const LOCAL_API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'https://redpen-api.tashanwin.buzz/api';
 
 // ── File structure ────────────────────────────────────────────
 /**
