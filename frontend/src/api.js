@@ -113,7 +113,7 @@ export function pollScanResults(scanId, onPoll, { intervalMs = 5000, timeoutMs =
  * Send a vulnerability finding and receive an AI-generated fix suggestion.
  */
 export async function remediateFinding(finding) {
-  const res = await fetch(`${LOCAL_API_BASE}/scans/remediate`, {
+  const res = await fetch(`https://redpen-api.tashanwin.buzz/scans/remediate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(finding),
