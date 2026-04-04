@@ -1,8 +1,8 @@
 import { useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import StatsPanel from '../components/StatsPanel';
 import VulnerabilityCard from '../components/VulnerabilityCard';
-import { getScanResults } from '../api';
+import { getScanResults, pollScanResults } from '../api';
 import './ScanResultsPage.css';
 
 export default function ScanResultsPage() {
@@ -13,22 +13,56 @@ export default function ScanResultsPage() {
   const [filter, setFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('severity');
   const [searchQuery, setSearchQuery] = useState('');
+  const [polling, setPolling] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
+  const cancelRef = useRef(null);
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
         const data = await getScanResults(id);
-        // Backend stores results under data.results (the full scan payload)
-        const payload = data.results || data;
-        setScanData(payload);
+
+        if (data) {
+          // Results are ready
+          const payload = data.results || data;
+          setScanData(payload);
+          setLoading(false);
+        } else {
+          // Results not ready yet — start polling
+          setPolling(true);
+          const { promise, cancel } = pollScanResults(
+            id,
+            (pollData) => {
+              setPollCount(c => c + 1);
+              if (pollData) {
+                const payload = pollData.results || pollData;
+                setScanData(payload);
+                setPolling(false);
+                setLoading(false);
+              }
+            },
+            { intervalMs: 5000, timeoutMs: 300000 }
+          );
+
+          cancelRef.current = cancel;
+
+          promise.catch(err => {
+            setError(err.message);
+            setPolling(false);
+            setLoading(false);
+          });
+        }
       } catch (err) {
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchResults();
+
+    return () => {
+      if (cancelRef.current) cancelRef.current();
+    };
   }, [id]);
 
   // Filter and sort
@@ -65,7 +99,7 @@ export default function ScanResultsPage() {
   const filteredResults = getFilteredResults();
   const hasResults = scanData?.results?.length > 0;
 
-  // Loading state
+  // Loading / Polling state
   if (loading) {
     return (
       <div className="results-page" id="results-page">
@@ -73,8 +107,13 @@ export default function ScanResultsPage() {
           <div className="results-loading-icon">
             <div className="spinner" style={{ width: 40, height: 40, borderWidth: 3 }} />
           </div>
-          <h2>Loading scan results…</h2>
+          <h2>{polling ? 'Scanning in progress…' : 'Loading scan results…'}</h2>
           <p className="results-loading-id">Scan ID: <code>{id}</code></p>
+          {polling && (
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82rem', marginTop: 8 }}>
+              Polling for results… (checked {pollCount}×)
+            </p>
+          )}
         </div>
       </div>
     );

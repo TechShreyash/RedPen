@@ -1,12 +1,9 @@
-import { useNavigate } from 'react-router-dom';
 import PrismaticBurst from '../components/PrismaticBurst/PrismaticBurst';
 import TextType from '../components/TextType/TextType';
 import CardSwap, { Card } from '../components/CardSwap/CardSwap';
-import BorderGlow from '../components/BorderGlow/BorderGlow';
 import './HomePage.css';
 
 const HomePage = () => {
-  const navigate = useNavigate();
 
   return (
     <div className="home-page">
@@ -214,30 +211,37 @@ const HomePage = () => {
         <section className="cta-section" id="detect">
           <h2 className="cta-title">Ready to scan your code?</h2>
           <p className="cta-subtitle">
-            See exactly what RedPen catches — from SQL injections to hardcoded secrets.
+            Run one command in your project directory to scan for vulnerabilities.
           </p>
-          <div className="cta-button-wrapper">
-            <BorderGlow
-              edgeSensitivity={30}
-              glowColor="350 80 60"
-              backgroundColor="#0a0215"
-              borderRadius={16}
-              glowRadius={40}
-              glowIntensity={1.2}
-              coneSpread={25}
-              animated={false}
-              colors={['#ff007a', '#4d3dff', '#38bdf8']}
-            >
+          <div className="terminal-block">
+            <div className="terminal-header">
+              <div className="terminal-dots">
+                <span className="terminal-dot terminal-dot--red" />
+                <span className="terminal-dot terminal-dot--yellow" />
+                <span className="terminal-dot terminal-dot--green" />
+              </div>
+              <span className="terminal-title">Terminal</span>
               <button
-                className="detect-button"
-                id="detect-button"
-                onClick={() => navigate('/results')}
+                className="terminal-copy-btn"
+                id="copy-command-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText('curl -sSL https://raw.githubusercontent.com/TechShreyash/RedPen/main/Scanner/scan.sh | bash');
+                  const btn = document.getElementById('copy-command-btn');
+                  btn.textContent = 'Copied!';
+                  setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+                }}
               >
-                <img src="/logo.png" alt="" className="detect-button-icon" style={{ height: '20px', width: 'auto' }} />
-                Detect Vulnerabilities
-                <span className="detect-button-arrow">→</span>
+                Copy
               </button>
-            </BorderGlow>
+            </div>
+            <div className="terminal-body">
+              <span className="terminal-prompt">$</span>
+              <code className="terminal-command">curl -sSL https://raw.githubusercontent.com/TechShreyash/RedPen/main/Scanner/scan.sh | bash</code>
+            </div>
+            <div className="terminal-hint">
+              <span className="terminal-hint-icon">💡</span>
+              <span>Navigate to your project root, then paste this command. Results open in your browser automatically.</span>
+            </div>
           </div>
         </section>
 

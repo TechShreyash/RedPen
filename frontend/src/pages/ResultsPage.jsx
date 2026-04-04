@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ShapeGrid from '../components/ShapeGrid/ShapeGrid';
 import FileTree from '../components/FileTree/FileTree';
 import CodeViewer from '../components/CodeViewer/CodeViewer';
 import ScanProgress from '../components/ScanProgress/ScanProgress';
-import { getScanResults } from '../api';
+import { getFileStructure, pollScanResults } from '../api';
 import './ResultsPage.css';
 
 // Build file tree from scanned paths
@@ -69,36 +69,80 @@ const ResultsPage = () => {
   const scanId = paramId || searchParams.get('id');
 
   const [scanData, setScanData] = useState(null);
+  const [fileStructure, setFileStructure] = useState(null);
   const [isScanning, setIsScanning] = useState(true);
+  const [scanStatus, setScanStatus] = useState('initializing'); // initializing | polling | complete | error
+  const [pollCount, setPollCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedVuln, setSelectedVuln] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const cancelPollRef = useRef(null);
 
-  // Load scan data — from backend if we have an ID, else static demo file
+  // Step 1: Load file structure (this always exists as soon as scan_id is created)
   useEffect(() => {
-    if (scanId) {
-      getScanResults(scanId)
-        .then(data => {
-          // Backend wraps scan results in { scan_id, results: { results, paths_scanned, total_time } }
-          const payload = data.results || data;
-          setScanData(payload);
-        })
-        .catch(err => {
-          console.error('Failed to load scan results:', err);
-          setLoadError(err.message);
-        });
-    } else {
-      // Fallback: load the static demo result.json
+    if (!scanId) {
+      // No scan_id — load demo data
       fetch('/result.json')
         .then(res => res.json())
-        .then(data => setScanData(data))
+        .then(data => {
+          setScanData(data);
+          setScanStatus('complete');
+        })
         .catch(err => {
           console.error('Failed to load results:', err);
           setLoadError('Failed to load demo data');
+          setScanStatus('error');
         });
+      return;
     }
+
+    // Fetch file structure first
+    getFileStructure(scanId)
+      .then(data => {
+        setFileStructure(data);
+        setScanStatus('polling');
+      })
+      .catch(err => {
+        console.error('Failed to load file structure:', err);
+        setLoadError(err.message);
+        setScanStatus('error');
+      });
   }, [scanId]);
+
+  // Step 2: Once we have the file structure, start polling for results every 10s
+  useEffect(() => {
+    if (scanStatus !== 'polling' || !scanId) return;
+
+    const { promise, cancel } = pollScanResults(
+      scanId,
+      (data) => {
+        // Called after each poll attempt
+        setPollCount(c => c + 1);
+        if (data) {
+          // Results received — normalize the shape
+          const payload = data.results || data;
+          setScanData(payload);
+          setScanStatus('complete');
+        }
+      },
+      { intervalMs: 10000, timeoutMs: 300000 } // Poll every 10 seconds
+    );
+
+    cancelPollRef.current = cancel;
+
+    promise.catch(err => {
+      if (err.message !== 'Scan timed out') {
+        console.error('Polling error:', err);
+      }
+      if (!scanData) {
+        setLoadError(err.message);
+        setScanStatus('error');
+      }
+    });
+
+    return () => cancel();
+  }, [scanStatus, scanId]);
 
   const handleScanComplete = useCallback(() => {
     setIsScanning(false);
@@ -144,6 +188,53 @@ const ResultsPage = () => {
     );
   }
 
+  // Show the ScanProgress while polling
+  if (isScanning) {
+    return (
+      <div className="results-page">
+        <div className="results-bg">
+          <ShapeGrid
+            speed={0.35}
+            squareSize={40}
+            direction="diagonal"
+            borderColor="#271E37"
+            hoverFillColor="#222222"
+            shape="hexagon"
+          />
+        </div>
+
+        {/* Navbar */}
+        <nav className="results-nav" id="results-nav">
+          <button className="back-button" id="back-home" onClick={() => navigate('/')}>
+            ← Back
+          </button>
+          <div className="results-nav-brand">
+            <img src="/logo.png" alt="RedPen" className="results-nav-logo" />
+            <span className="results-nav-title">RedPen</span>
+          </div>
+          <div className="results-nav-stats">
+            {scanId && (
+              <span className="nav-stat nav-stat--time" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem' }}>
+                ID: {scanId}
+              </span>
+            )}
+          </div>
+        </nav>
+
+        <div className="results-content-wrapper">
+          <ScanProgress
+            onComplete={handleScanComplete}
+            scanStatus={scanStatus}
+            scanData={scanData}
+            fileStructure={fileStructure}
+            pollCount={pollCount}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Still loading scan data after scan animation finished
   if (!scanData) {
     return (
       <div className="results-page">
@@ -159,35 +250,49 @@ const ResultsPage = () => {
         </div>
         <div className="results-loading">
           <div className="results-spinner"></div>
-          <p>{scanId ? `Loading scan ${scanId}…` : 'Loading scan data...'}</p>
+          <p>{scanId ? `Waiting for scan results…` : 'Loading scan data...'}</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: 8 }}>
+            The scanner is still processing your files.
+          </p>
         </div>
       </div>
     );
   }
 
-  const fileTree = buildFileTree(scanData.paths_scanned);
-  const errorFileIds = [...new Set(scanData.results.map(r => r.path))];
+  // Normalize results — handle both { results: { results: [...] } } and { results: [...] }
+  const resultsArray = Array.isArray(scanData.results)
+    ? scanData.results
+    : (scanData.results?.results || []);
+  const pathsScanned = scanData.paths_scanned || scanData.results?.paths_scanned || [];
+  const totalTime = scanData.total_time || scanData.results?.total_time || 0;
+
+  const fileTree = buildFileTree(pathsScanned);
+  const errorFileIds = [...new Set(resultsArray.map(r => r.path))];
   const expandedFolders = [...new Set(
-    scanData.paths_scanned
+    pathsScanned
       .filter(p => p.includes('/'))
       .map(p => p.split('/').slice(0, -1).join('/'))
   )];
 
   // Get vulnerabilities for selected file
   const fileVulns = selectedFile
-    ? scanData.results.filter(r => r.path === selectedFile)
+    ? resultsArray.filter(r => r.path === selectedFile)
     : [];
 
-  // Get code to display
-  const displayVuln = selectedVuln || (fileVulns.length > 0 ? fileVulns[0] : null);
-  const codeToShow = displayVuln?.snippet_extended || '';
-  const codeStartLine = displayVuln?.snippet_extended_lines?.start || 1;
-  const highlightLines = displayVuln
-    ? Array.from(
-        { length: displayVuln.snippet_lines.end - displayVuln.snippet_lines.start + 1 },
-        (_, i) => displayVuln.snippet_lines.start + i
-      )
-    : [];
+  // Which vulns to display in the main area:
+  // - If a specific vuln was clicked → show only that one
+  // - If a file was selected from tree → show ALL vulns for that file
+  const displayVulns = selectedVuln
+    ? [selectedVuln]
+    : fileVulns;
+
+  const getHighlightLines = (vuln) =>
+    vuln
+      ? Array.from(
+          { length: vuln.snippet_lines.end - vuln.snippet_lines.start + 1 },
+          (_, i) => vuln.snippet_lines.start + i
+        )
+      : [];
 
   return (
     <div className="results-page">
@@ -215,24 +320,17 @@ const ResultsPage = () => {
         {showResults && (
           <div className="results-nav-stats">
             <span className="nav-stat nav-stat--error">
-              {scanData.results.filter(r => r.severity === 'ERROR').length} Errors
+              {resultsArray.filter(r => r.severity === 'ERROR').length} Errors
             </span>
             <span className="nav-stat nav-stat--warning">
-              {scanData.results.filter(r => r.severity === 'WARNING').length} Warnings
+              {resultsArray.filter(r => r.severity === 'WARNING').length} Warnings
             </span>
             <span className="nav-stat nav-stat--time">
-              {scanData.total_time.toFixed(1)}s scan
+              {totalTime.toFixed(1)}s scan
             </span>
           </div>
         )}
       </nav>
-
-      {/* Scanning animation */}
-      {isScanning && (
-        <div className="results-content-wrapper">
-          <ScanProgress onComplete={handleScanComplete} />
-        </div>
-      )}
 
       {/* Results view */}
       {showResults && (
@@ -252,10 +350,10 @@ const ResultsPage = () => {
               <div className="vuln-list">
                 <div className="vuln-list-header">
                   <span className="vuln-list-icon">⚠</span>
-                  <span>Vulnerabilities ({scanData.results.length})</span>
+                  <span>Vulnerabilities ({resultsArray.length})</span>
                 </div>
                 <div className="vuln-list-items">
-                  {scanData.results.map((vuln, idx) => (
+                  {resultsArray.map((vuln, idx) => (
                     <div
                       key={idx}
                       className={`vuln-item ${selectedVuln?.check_id === vuln.check_id && selectedVuln?.snippet_lines?.start === vuln.snippet_lines?.start ? 'vuln-item--selected' : ''}`}
@@ -268,7 +366,10 @@ const ResultsPage = () => {
                         </span>
                         <span className="vuln-file">{vuln.path.split('/').pop()}</span>
                       </div>
-                      <p className="vuln-message">{vuln.message.slice(0, 80)}...</p>
+                      <div className="vuln-item-title-row">
+                        <span className="vuln-item-title">{vuln.title || vuln.check_id.split('.').pop().replace(/-/g, ' ')}</span>
+                      </div>
+                      <p className="vuln-message">{vuln.message.slice(0, 90)}...</p>
                       <div className="vuln-tags">
                         {vuln.metadata.cwe?.slice(0, 1).map((cwe, i) => (
                           <span key={i} className="vuln-cwe-tag">
@@ -293,111 +394,121 @@ const ResultsPage = () => {
                   <h2>Select a file or vulnerability</h2>
                   <p>Click on a file in the tree or a vulnerability from the list to view the code and details.</p>
                 </div>
-              ) : (
+              ) : displayVulns.length > 0 ? (
                 <>
-                  {/* Code viewer */}
-                  {displayVuln && (
-                    <CodeViewer
-                      code={codeToShow}
-                      startLine={codeStartLine}
-                      highlightLines={highlightLines}
-                      filename={displayVuln.path}
-                      language="python"
-                      vulnerabilities={fileVulns}
-                    />
+                  {/* File header when showing multiple vulns */}
+                  {!selectedVuln && fileVulns.length > 1 && (
+                    <div className="file-vulns-header">
+                      <span className="file-vulns-header-icon">📄</span>
+                      <span className="file-vulns-header-path">{selectedFile}</span>
+                      <span className="file-vulns-header-count">
+                        {fileVulns.length} vulnerabilit{fileVulns.length > 1 ? 'ies' : 'y'}
+                      </span>
+                    </div>
                   )}
 
-                  {/* Vulnerability details */}
-                  {displayVuln && (
-                    <div className="vuln-details">
-                      <div className="vuln-details-header">
-                        <div className="vuln-details-sev-wrap">
-                          <span className={`vuln-details-severity ${getSeverityClass(displayVuln.severity)}`}>
-                            {getSeverityIcon(displayVuln.severity)} {displayVuln.severity}
-                          </span>
-                          {displayVuln.metadata.likelihood && (
-                            <span className="vuln-likelihood">
-                              Likelihood: {displayVuln.metadata.likelihood}
+                  {displayVulns.map((vuln, vIdx) => (
+                    <div key={`${vuln.check_id}-${vuln.snippet_lines?.start}-${vIdx}`} className="vuln-block">
+                      {/* Code viewer */}
+                      <CodeViewer
+                        code={vuln.snippet_extended || ''}
+                        startLine={vuln.snippet_extended_lines?.start || 1}
+                        highlightLines={getHighlightLines(vuln)}
+                        filename={vuln.path}
+                        language="python"
+                        vulnerabilities={[vuln]}
+                      />
+
+                      {/* Vulnerability details */}
+                      <div className="vuln-details">
+                        <div className="vuln-details-header">
+                          <div className="vuln-details-sev-wrap">
+                            <span className={`vuln-details-severity ${getSeverityClass(vuln.severity)}`}>
+                              {getSeverityIcon(vuln.severity)} {vuln.severity}
                             </span>
-                          )}
-                          {displayVuln.metadata.impact && (
-                            <span className="vuln-impact">
-                              Impact: {displayVuln.metadata.impact}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="vuln-details-title">{displayVuln.check_id.split('.').pop()}</h3>
-                      </div>
-
-                      <p className="vuln-details-message">{displayVuln.message}</p>
-
-                      <div className="vuln-details-meta">
-                        <div className="vuln-meta-group">
-                          <h4>CWE References</h4>
-                          <div className="vuln-meta-tags">
-                            {displayVuln.metadata.cwe?.map((cwe, i) => (
-                              <span key={i} className="vuln-meta-tag vuln-meta-tag--cwe">{cwe}</span>
-                            ))}
+                            {vuln.metadata.likelihood && (
+                              <span className="vuln-likelihood">
+                                Likelihood: {vuln.metadata.likelihood}
+                              </span>
+                            )}
+                            {vuln.metadata.impact && (
+                              <span className="vuln-impact">
+                                Impact: {vuln.metadata.impact}
+                              </span>
+                            )}
                           </div>
+                          <h3 className="vuln-details-title">
+                            {vuln.title || vuln.check_id.split('.').pop().replace(/-/g, ' ')}
+                          </h3>
                         </div>
 
-                        <div className="vuln-meta-group">
-                          <h4>OWASP Classification</h4>
-                          <div className="vuln-meta-tags">
-                            {displayVuln.metadata.owasp?.map((owasp, i) => (
-                              <span key={i} className="vuln-meta-tag vuln-meta-tag--owasp">{owasp}</span>
-                            ))}
-                          </div>
-                        </div>
+                        <p className="vuln-details-message">{vuln.message}</p>
 
-                        {displayVuln.metadata.references?.length > 0 && (
+                        <div className="vuln-details-meta">
                           <div className="vuln-meta-group">
-                            <h4>References</h4>
-                            <div className="vuln-meta-links">
-                              {displayVuln.metadata.references.map((ref, i) => (
-                                <a key={i} href={ref} target="_blank" rel="noopener noreferrer" className="vuln-ref-link">
-                                  {new URL(ref).hostname} ↗
-                                </a>
+                            <h4>CWE References</h4>
+                            <div className="vuln-meta-tags">
+                              {vuln.metadata.cwe?.map((cwe, i) => (
+                                <span key={i} className="vuln-meta-tag vuln-meta-tag--cwe">{cwe}</span>
                               ))}
                             </div>
                           </div>
-                        )}
 
-                        <div className="vuln-meta-group">
-                          <h4>Detection Info</h4>
-                          <div className="vuln-details-grid">
-                            <div className="vuln-detail-item">
-                              <span className="vuln-detail-label">Rule ID</span>
-                              <span className="vuln-detail-value">{displayVuln.check_id}</span>
+                          <div className="vuln-meta-group">
+                            <h4>OWASP Classification</h4>
+                            <div className="vuln-meta-tags">
+                              {vuln.metadata.owasp?.map((owasp, i) => (
+                                <span key={i} className="vuln-meta-tag vuln-meta-tag--owasp">{owasp}</span>
+                              ))}
                             </div>
-                            <div className="vuln-detail-item">
-                              <span className="vuln-detail-label">File</span>
-                              <span className="vuln-detail-value">{displayVuln.path}</span>
+                          </div>
+
+                          {vuln.metadata.references?.length > 0 && (
+                            <div className="vuln-meta-group">
+                              <h4>References</h4>
+                              <div className="vuln-meta-links">
+                                {vuln.metadata.references.map((ref, i) => (
+                                  <a key={i} href={ref} target="_blank" rel="noopener noreferrer" className="vuln-ref-link">
+                                    {new URL(ref).hostname} ↗
+                                  </a>
+                                ))}
+                              </div>
                             </div>
-                            <div className="vuln-detail-item">
-                              <span className="vuln-detail-label">Lines</span>
-                              <span className="vuln-detail-value">{displayVuln.snippet_lines.start}–{displayVuln.snippet_lines.end}</span>
-                            </div>
-                            <div className="vuln-detail-item">
-                              <span className="vuln-detail-label">Confidence</span>
-                              <span className="vuln-detail-value">{displayVuln.metadata.confidence}</span>
+                          )}
+
+                          <div className="vuln-meta-group">
+                            <h4>Detection Info</h4>
+                            <div className="vuln-details-grid">
+                              <div className="vuln-detail-item">
+                                <span className="vuln-detail-label">Rule ID</span>
+                                <span className="vuln-detail-value">{vuln.check_id}</span>
+                              </div>
+                              <div className="vuln-detail-item">
+                                <span className="vuln-detail-label">File</span>
+                                <span className="vuln-detail-value">{vuln.path}</span>
+                              </div>
+                              <div className="vuln-detail-item">
+                                <span className="vuln-detail-label">Lines</span>
+                                <span className="vuln-detail-value">{vuln.snippet_lines.start}–{vuln.snippet_lines.end}</span>
+                              </div>
+                              <div className="vuln-detail-item">
+                                <span className="vuln-detail-label">Confidence</span>
+                                <span className="vuln-detail-value">{vuln.metadata.confidence}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  {/* File vulns list when no vuln selected but file is */}
-                  {!displayVuln && fileVulns.length === 0 && selectedFile && (
-                    <div className="results-empty">
-                      <div className="results-empty-icon">✅</div>
-                      <h2>No vulnerabilities</h2>
-                      <p>This file has no detected security issues.</p>
-                    </div>
-                  )}
+                  ))}
                 </>
-              )}
+              ) : selectedFile ? (
+                <div className="results-empty">
+                  <div className="results-empty-icon">✅</div>
+                  <h2>No vulnerabilities</h2>
+                  <p>This file has no detected security issues.</p>
+                </div>
+              ) : null}
             </main>
           </div>
         </div>

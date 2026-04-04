@@ -1,12 +1,9 @@
 /**
  * RedPen API Service
- * Centralised API calls to the FastAPI backend.
- *
- * In development the Vite proxy rewrites /api → http://localhost:8000/api
- * so we only need relative paths here.
+ * Centralised API calls to the deployed FastAPI backend.
  */
 
-const API_BASE = '/api';
+const API_BASE = 'https://redpen-api.tashanwin.buzz/api';
 
 // ── File structure ────────────────────────────────────────────
 /**
@@ -37,13 +34,11 @@ export async function getFileStructure(scanId) {
 /**
  * GET /api/scans/results/:scanId
  * Retrieve the full scan results for a given scan.
+ * Returns null (instead of throwing) when results aren't ready yet (404).
  */
 export async function getScanResults(scanId) {
   const res = await fetch(`${API_BASE}/scans/results/${scanId}`);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `Scan results not found (${res.status})`);
-  }
+  if (!res.ok) return null; // not ready yet — API returns error while scan is running
   return res.json();
 }
 
@@ -59,4 +54,55 @@ export async function saveScanResults(scanId, results) {
   });
   if (!res.ok) throw new Error(`Failed to save scan results (${res.status})`);
   return res.json();
+}
+
+/**
+ * Poll for scan results every `intervalMs` until results arrive or `timeoutMs` is exceeded.
+ * @param {string} scanId
+ * @param {(data: object | null) => void} onPoll  – called after every poll attempt
+ * @param {{ intervalMs?: number, timeoutMs?: number }} opts
+ * @returns {{ promise: Promise<object>, cancel: () => void }}
+ */
+export function pollScanResults(scanId, onPoll, { intervalMs = 5000, timeoutMs = 300000 } = {}) {
+  let cancelled = false;
+  let timerId = null;
+
+  const promise = new Promise((resolve, reject) => {
+    const start = Date.now();
+
+    const tick = async () => {
+      if (cancelled) return;
+
+      try {
+        const data = await getScanResults(scanId);
+        onPoll?.(data);
+
+        if (data) {
+          // Results are ready
+          resolve(data);
+          return;
+        }
+      } catch (err) {
+        if (cancelled) return;
+        reject(err);
+        return;
+      }
+
+      if (Date.now() - start > timeoutMs) {
+        reject(new Error('Scan timed out'));
+        return;
+      }
+
+      timerId = setTimeout(tick, intervalMs);
+    };
+
+    tick();
+  });
+
+  const cancel = () => {
+    cancelled = true;
+    if (timerId) clearTimeout(timerId);
+  };
+
+  return { promise, cancel };
 }
