@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY main.py database.py ./
+COPY main.py database.py gemini_summary.py ./
 
 # Don't bake .env into the image — pass at runtime via
 #   docker run --env-file .env ...
